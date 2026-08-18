@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iPhone PC Remote</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>УПРАВЛЕНИЕ ПК</h1>
+    
+    <!-- Тачпад -->
+    <div id="touchpad">🖱️ Тачпад (1 палец — мышь, 2 — скролл)</div>
+
+    <!-- Клик мыши -->
+    <div class="grid-2">
+        <button class="blue" onclick="sendCmd('/click')">🖱️ ЛКМ</button>
+        <button class="blue" onclick="sendCmd('/right_click')">🖱️ ПКМ</button>
+    </div>
+    
+    <!-- Скролл кнопками -->
+    <div class="grid-2">
+        <button class="action-btn" onclick="sendCmd('/scroll?amount=300')">📜 Скролл Вверх ⬆️</button>
+        <button class="action-btn" onclick="sendCmd('/scroll?amount=-300')">📜 Скролл Вниз ⬇️</button>
+    </div>
+
+    <!-- Компактные кнопки звука и медиа -->
+    <div class="grid-4">
+        <button class="square" onclick="sendCmd('/mute')">🔇</button>
+        <button class="square" onclick="sendCmd('/vol_down')">🔉</button>
+        <button class="square" onclick="sendCmd('/vol_up')">🔊</button>
+        <button class="square" onclick="sendCmd('/space')">⏯</button>
+    </div>
+
+    <!-- Блок ввода текста + Backspace + Enter -->
+    <div class="text-wrapper">
+        <div class="text-container">
+            <input type="text" id="textInput" placeholder="Печать (рус/ен)...">
+            <button class="send-btn" onclick="sendText()">SEND</button>
+        </div>
+        <div class="grid-2" style="margin-top: 8px;">
+            <button class="action-btn" onclick="sendCmd('/backspace')">⌫ Backspace</button>
+            <button class="action-btn" onclick="sendCmd('/enter')">↵ Enter</button>
+        </div>
+    </div>
+
+    <!-- Быстрый запуск приложений и сайтов -->
+    <div class="grid-2">
+        <button onclick="sendCmd('/open_app?name=telegram')">✈️ Telegram</button>
+        <button onclick="sendCmd('/open_app?name=firefox')">🦊 Firefox</button>
+    </div>
+    <div class="grid-2" style="margin-top: 8px;">
+        <button class="red-accent" onclick="sendCmd('/open_app?name=youtube')">▶️ YouTube</button>
+        <button class="purple-accent" onclick="sendCmd('/open_app?name=yummy')">🍜 YummyAni</button>
+    </div>
+    <div class="grid-2" style="margin-top: 8px;">
+        <button class="orange" onclick="sendCmd('/alt_f4')">❌ Alt + F4</button>
+        <button class="secondary" onclick="sendCmd('/restart_script')">🔄 Рестарт пульта</button>
+    </div>
+
+    <!-- Управление питанием ПК -->
+    <div class="grid-2" style="margin-top: 15px;">
+        <button class="red" onclick="if(confirm('Перезагрузить ПК?')) sendCmd('/reboot')">🔄 Перезагрузка</button>
+        <button class="red" onclick="if(confirm('Выключить ПК?')) sendCmd('/shutdown')">⏻ Выключить</button>
+    </div>
+
+    <script>
+        function sendCmd(url) {
+            fetch(url).catch(err => console.log(err));
+        }
+
+        function sendText() {
+            const input = document.getElementById('textInput');
+            const text = input.value;
+            if (!text) return;
+            
+            fetch(`/type_text?text=${encodeURIComponent(text)}`)
+                .then(() => { input.value = ''; })
+                .catch(err => console.log(err));
+        }
+
+        const tp = document.getElementById('touchpad');
+        let startX = 0, startY = 0;
+        let startTouchCount = 0;
+
+        tp.addEventListener('touchstart', (e) => {
+            startTouchCount = e.touches.length;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        }, { passive: true });
+
+        tp.addEventListener('touchmove', (e) => {
+            let currentTouches = e.touches.length;
+
+            if (currentTouches === 1 && startTouchCount === 1) {
+                let x = e.touches[0].clientX;
+                let y = e.touches[0].clientY;
+                sendCmd(`/move?dx=${(x - startX) * 1.5}&dy=${(y - startY) * 1.5}`);
+                startX = x;
+                startY = y;
+            } else if (currentTouches === 2) {
+                let y1 = e.touches[0].clientY;
+                let dy = y1 - startY;
+                if (Math.abs(dy) > 5) {
+                    let scrollAmount = dy > 0 ? -120 : 120; 
+                    sendCmd(`/scroll?amount=${scrollAmount}`);
+                    startY = y1;
+                }
+            }
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>
